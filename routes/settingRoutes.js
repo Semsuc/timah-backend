@@ -8,7 +8,7 @@ const {
   getSettingByKey,
   upsertSetting,
   deleteSetting,
-} = require('../controllers/SettingController'); // capital S
+} = require('../controllers/settingController'); // capital S
 
 const { protectAdmin } = require('../middlewares/authMiddleware');
 
