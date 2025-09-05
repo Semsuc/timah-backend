@@ -45,7 +45,7 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: process.env.CLIENT_URL,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -64,10 +64,7 @@ io.use((socket, next) => {
   if (!token) return next(new Error("Unauthorized: No token provided"));
 
   try {
-    const decoded = jwt.verify(
-      token.replace("Bearer ", ""),
-      process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token.replace("Bearer ", ""), process.env.JWT_SECRET);
     socket.adminId = decoded.id;
     next();
   } catch (err) {
@@ -96,13 +93,13 @@ app.set("io", io);
   "CLIENT_URL",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
+  "SERVER_URL",
 ].forEach((key) => {
   if (!process.env[key]) console.error(`❌ Missing ENV variable: ${key}`);
   else console.log(`✅ ${key} loaded`);
 });
 
 // =================== Stripe Webhook =================== //
-// ⚠️ Must come before express.json()
 app.post(
   "/api/webhook",
   express.raw({ type: "application/json" }),
@@ -111,11 +108,7 @@ app.post(
     let event;
 
     try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
       console.error("❌ Webhook signature verification failed:", err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -140,17 +133,13 @@ app.post(
               `<div style="font-family: Arial, sans-serif; color:#333;">
                 <div style="text-align:center; margin-bottom:20px;">
                   <img src="${
-                    process.env.SERVER_URL || "http://localhost:4500"
+                    process.env.SERVER_URL
                   }/branding/timah-logo.png" alt="Timah's Kitchen" width="150" />
                 </div>
                 <h2 style="color:#5A2D82;">Hi ${order.name || "Guest"},</h2>
-                <p>Your payment of <strong>£${order.total.toFixed(
-                  2
-                )}</strong> has been successfully received.</p>
+                <p>Your payment of <strong>£${order.total.toFixed(2)}</strong> has been successfully received.</p>
                 <p>Your order is now being processed.</p>
-                <p><strong>Tracking Number:</strong> ${
-                  order.trackingNumber
-                }</p>
+                <p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>
                 <p style="margin-top:20px;">Thank you for ordering,<br><strong>Timah's Kitchen</strong></p>
               </div>`
             );
@@ -170,17 +159,16 @@ app.post(
 // =================== Middleware =================== //
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: process.env.CLIENT_URL,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
 
-// ✅ must come AFTER webhook but BEFORE other routes
 app.use(express.json());
 
-// Activity logging middleware
+// Activity logging
 app.use(async (req, res, next) => {
   try {
     await ActivityLog.create({
@@ -204,22 +192,15 @@ app.use("/branding", express.static(path.join(__dirname, "uploads/branding")));
 const profileUpload = multer({
   storage: multer.diskStorage({
     destination: "uploads/profile/",
-    filename: (req, file, cb) =>
-      cb(null, Date.now() + path.extname(file.originalname)),
+    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
   }),
 });
 
-app.post(
-  "/api/users/upload-profile-pic",
-  profileUpload.single("profilePic"),
-  (req, res) => {
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    const url = `${
-      process.env.SERVER_URL || "http://localhost:4500"
-    }/uploads/profile/${req.file.filename}`;
-    res.status(200).json({ url });
-  }
-);
+app.post("/api/users/upload-profile-pic", profileUpload.single("profilePic"), (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  const url = `${process.env.SERVER_URL}/uploads/profile/${req.file.filename}`;
+  res.status(200).json({ url });
+});
 
 // =================== API Routes =================== //
 // Public
@@ -259,15 +240,13 @@ app.use((err, req, res, next) => {
 connectDB()
   .then(() => {
     console.log(`✅ MongoDB connected: ${mongoose.connection.name}`);
-    const PORT = process.env.PORT || 4500;
-    server.listen(PORT, () =>
-      logger.info(`🚀 Server running at http://localhost:${PORT}`)
-    );
+    const PORT = process.env.PORT;
+    server.listen(PORT, () => logger.info(`🚀 Server running on port ${PORT}`));
   })
   .catch((err) => {
     console.error("❌ DB connection failed:", err.message);
     process.exit(1);
   });
 
-// Export server and io
+// Export server & io
 module.exports = { app, server, io };
