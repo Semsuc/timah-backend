@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Notification = require('../models/Notification');
-const AdminUser = require('../models/adminUser');
+const AdminUser = require('../models/AdminUser');
 
 /**
  * @desc   Get all notifications (super admin view)
