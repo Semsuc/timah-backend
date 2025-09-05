@@ -1,6 +1,6 @@
 // controllers/settingController.js
 const asyncHandler = require('express-async-handler');
-const Setting = require('../models/setting');
+const Setting = require('../models/Setting');
 
 // @desc    Get all settings
 exports.getAllSettings = asyncHandler(async (req, res) => {
