@@ -56,7 +56,6 @@ io.use((socket, next) => {
   const token =
     socket.handshake.auth?.token || socket.handshake.headers["authorization"];
 
-  // ✅ Always allow dev-token
   if (token === "dev-token") {
     socket.adminId = devAdmin._id;
     return next();
@@ -103,7 +102,7 @@ app.set("io", io);
 });
 
 // =================== Stripe Webhook =================== //
-// ⚠️ Webhooks need raw body, so define before express.json()
+// ⚠️ Must come before express.json()
 app.post(
   "/api/webhook",
   express.raw({ type: "application/json" }),
@@ -178,6 +177,7 @@ app.use(
   })
 );
 
+// ✅ must come AFTER webhook but BEFORE other routes
 app.use(express.json());
 
 // Activity logging middleware
@@ -198,7 +198,6 @@ app.use(async (req, res, next) => {
 // =================== Static Folders =================== //
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/menu", express.static(path.join(__dirname, "data/menu")));
-// ✅ Logo and branding assets
 app.use("/branding", express.static(path.join(__dirname, "uploads/branding")));
 
 // =================== Multer Config =================== //
