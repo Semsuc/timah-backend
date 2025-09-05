@@ -1,3 +1,4 @@
+// middlewares/authMiddleware.js
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("express-async-handler");
 const AdminUser = require("../models/AdminUser");
@@ -6,7 +7,10 @@ const AdminUser = require("../models/AdminUser");
 const protect = asyncHandler(async (req, res, next) => {
   let token;
 
-  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
     try {
       // Extract token
       token = req.headers.authorization.split(" ")[1];
@@ -14,7 +18,7 @@ const protect = asyncHandler(async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Attach admin user
+      // Attach admin user to req
       req.admin = await AdminUser.findById(decoded.id).select("-password");
 
       if (!req.admin) {
@@ -24,7 +28,7 @@ const protect = asyncHandler(async (req, res, next) => {
 
       return next();
     } catch (error) {
-      console.error("JWT verification failed:", error.message);
+      console.error("❌ JWT verification failed:", error.message);
       res.status(401);
       throw new Error("Not authorized, token failed");
     }
