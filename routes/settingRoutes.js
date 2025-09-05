@@ -1,11 +1,14 @@
+// routes/settingRoutes.js
 const express = require('express');
 const router = express.Router();
+
+// ✅ Make sure the filename matches exactly (case-sensitive)
 const {
   getAllSettings,
   getSettingByKey,
   upsertSetting,
   deleteSetting,
-} = require('../controllers/settingController');
+} = require('../controllers/SettingController'); // capital S
 
 const { protectAdmin } = require('../middlewares/authMiddleware');
 
