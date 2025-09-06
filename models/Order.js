@@ -3,8 +3,7 @@ const mongoose = require("mongoose");
 
 // Individual items in an order
 const orderItemSchema = new mongoose.Schema({
-  id: String,           // MongoDB _id of MenuItem
-  menuId: Number,       // Numeric menuId for admin reference
+  menuId: { type: Number, required: true }, // Numeric ID from your menu data
   name: { type: String, required: true },
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
@@ -62,10 +61,10 @@ const orderSchema = new mongoose.Schema(
     // Stripe session ID (for Stripe integration)
     stripeSessionId: { type: String, default: null },
 
-    // Tracking number (user-friendly vs MongoDB _id)
+    // Tracking number
     trackingNumber: { type: String, default: null, index: true },
 
-    // Optional ETA for delivery tracking
+    // ETA for delivery tracking
     estimatedDelivery: { type: Date, default: null },
   },
   {
@@ -73,7 +72,7 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Auto-generate a tracking number if not already set
+// Auto-generate tracking number
 orderSchema.pre("save", function (next) {
   if (!this.trackingNumber) {
     this.trackingNumber =
