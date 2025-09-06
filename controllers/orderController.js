@@ -1,4 +1,3 @@
-// backend/controllers/orderController.js
 const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const MenuItem = require("../models/MenuItem");
@@ -37,7 +36,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
     }
 
     orderItems.push({
-      menuId, // ✅ keep only menuId, not item._id
+      menuId,
       name: item.name,
       quantity: item.quantity,
       price: item.price,
@@ -52,8 +51,8 @@ exports.createOrder = asyncHandler(async (req, res) => {
     address,
     items: orderItems,
     total,
-    status: "Pending", // order is pending until admin confirms
-    paymentStatus: "Pending", // payment remains pending
+    status: "Pending",
+    paymentStatus: "Pending",
     paymentMethod,
     isGuest: true,
     trackingNumber: generateTrackingNumber(),
@@ -61,7 +60,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
   const savedOrder = await newOrder.save();
 
-  // Send initial “order received” email
+  // Send initial confirmation email
   try {
     const subject = "✅ Order Received!";
     const message = `
@@ -134,8 +133,26 @@ exports.getGuestOrderStatus = asyncHandler(async (req, res) => {
 });
 
 // ===============================
+// Get orders by Menu ID (Numeric menuId)
+// GET /api/orders/menu/:menuId
+// Public/Admin
+// ===============================
+exports.getOrdersByMenuId = asyncHandler(async (req, res) => {
+  const { menuId } = req.params;
+  const orders = await Order.find({ "items.menuId": Number(menuId) });
+
+  if (!orders || orders.length === 0) {
+    return res
+      .status(404)
+      .json({ success: false, message: "No orders found for this menuId" });
+  }
+
+  res.json({ success: true, count: orders.length, orders });
+});
+
+// ===============================
 // Admin: Get all orders
-// GET /api/admin/orders
+// GET /api/orders/admin
 // Private/Admin
 // ===============================
 exports.getAllOrders = asyncHandler(async (req, res) => {
@@ -144,8 +161,8 @@ exports.getAllOrders = asyncHandler(async (req, res) => {
 });
 
 // ===============================
-// Admin: Update order status (Stripe payment on confirmation)
-// PUT /api/admin/orders/:id/status
+// Admin: Update order status
+// PUT /api/orders/admin/:id/status
 // Private/Admin
 // ===============================
 exports.updateOrderStatus = asyncHandler(async (req, res) => {
@@ -171,7 +188,7 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
   order.status = status;
   if (!order.trackingNumber) order.trackingNumber = generateTrackingNumber();
 
-  // Stripe session creation if order confirmed and payment method is Stripe
+  // Stripe session if confirmed
   let stripePaymentLink = null;
   if (status === "Confirmed" && order.paymentMethod.toLowerCase() === "stripe") {
     const line_items = order.items.map((item) => ({
@@ -204,7 +221,7 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
 
   const updatedOrder = await order.save();
 
-  // Email content
+  // Email user
   let subject = `📢 Order Status Updated: ${order.status}`;
   let message = `Your order status is now: ${order.status}`;
 
@@ -218,29 +235,8 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
       Tracking Number: ${order.trackingNumber}<br/>
       Total: £${order.total.toFixed(2)}
     `;
-  } else {
-    switch (order.status) {
-      case "Processing":
-        subject = "📦 Your order is being processed!";
-        message = "Your order is now in processing.";
-        break;
-      case "Out for Delivery":
-        subject = "🚚 Your order is out for delivery!";
-        message = "Your order is on the way.";
-        break;
-      case "Delivered":
-        subject = "✅ Your order has been delivered!";
-        message = `Your order has been delivered successfully. Payment status: ${order.paymentStatus}`;
-        break;
-      case "Cancelled":
-        subject = "❌ Your order has been cancelled";
-        message =
-          "Your order has been cancelled. Please contact us if this is a mistake.";
-        break;
-    }
   }
 
-  // Send email to guest
   try {
     await sendEmail(
       order.email,
@@ -266,7 +262,7 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
 
 // ===============================
 // Admin: Mark COD payment as Paid
-// PUT /api/admin/orders/:id/mark-paid
+// PUT /api/orders/admin/:id/mark-paid
 // Private/Admin
 // ===============================
 exports.markPaymentPaid = asyncHandler(async (req, res) => {
@@ -284,7 +280,7 @@ exports.markPaymentPaid = asyncHandler(async (req, res) => {
 
 // ===============================
 // Admin: Delete order
-// DELETE /api/admin/orders/:id
+// DELETE /api/orders/admin/:id
 // Private/Admin
 // ===============================
 exports.deleteOrder = asyncHandler(async (req, res) => {
