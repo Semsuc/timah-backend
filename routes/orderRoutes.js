@@ -1,3 +1,4 @@
+// backend/routes/orderRoutes.js
 const express = require("express");
 const router = express.Router();
 
@@ -6,13 +7,11 @@ const {
   createOrder,
   getOrderById,
   getGuestOrderStatus,
-  getOrdersByMenuId, // 👈 NEW
+  getOrdersByMenuId,
 } = require("../controllers/orderController");
 
-// ✅ Import admin order routes
-const adminOrderRoutes = require("./adminOrderRoutes");
+// ================= PUBLIC ROUTES ================= //
 
-// ================= PUBLIC ROUTES =================
 // Create new guest order (COD/Stripe)
 router.post("/", createOrder);
 
@@ -20,13 +19,9 @@ router.post("/", createOrder);
 router.get("/track/:trackingNumber", getGuestOrderStatus);
 
 // Get all orders containing a specific menuId
-router.get("/menu/:menuId", getOrdersByMenuId); // 👈 NEW
+router.get("/menu/:menuId", getOrdersByMenuId);
 
 // Get single order by MongoDB _id
 router.get("/:id", getOrderById);
-
-// ================= ADMIN ROUTES =================
-// Mounted at /api/orders/admin
-router.use("/admin", adminOrderRoutes);
 
 module.exports = router;
