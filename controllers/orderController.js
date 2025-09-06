@@ -1,3 +1,4 @@
+// backend/controllers/orderController.js
 const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const MenuItem = require("../models/MenuItem");
@@ -5,7 +6,8 @@ const sendEmail = require("../utils/sendEmail");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Helper to generate unique tracking numbers
-const generateTrackingNumber = () => `TK-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+const generateTrackingNumber = () =>
+  `TK-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
 // ===============================
 // Create order for guest checkout (COD or Stripe)
@@ -13,7 +15,8 @@ const generateTrackingNumber = () => `TK-${Date.now()}-${Math.floor(Math.random(
 // Public
 // ===============================
 exports.createOrder = asyncHandler(async (req, res) => {
-  const { name, email, phone1, phone2, address, items, total, paymentMethod } = req.body;
+  const { name, email, phone1, phone2, address, items, total, paymentMethod } =
+    req.body;
 
   if (!items || items.length === 0) {
     res.status(400);
@@ -34,8 +37,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
     }
 
     orderItems.push({
-      id: item._id,
-      menuId,
+      menuId, // ✅ keep only menuId, not item._id
       name: item.name,
       quantity: item.quantity,
       price: item.price,
@@ -50,7 +52,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
     address,
     items: orderItems,
     total,
-    status: "Pending",       // order is pending until admin confirms
+    status: "Pending", // order is pending until admin confirms
     paymentStatus: "Pending", // payment remains pending
     paymentMethod,
     isGuest: true,
@@ -68,13 +70,20 @@ exports.createOrder = asyncHandler(async (req, res) => {
           <img src="${process.env.CLIENT_URL}/logo.png" alt="Timah's Kitchen" width="150" />
         </div>
         <h2 style="color:#5A2D82;">Hi ${savedOrder.name || "Guest"},</h2>
-        <p>Your order has been received on <strong>${new Date(savedOrder.createdAt).toLocaleString()}</strong>, totaling <strong>£${savedOrder.total.toFixed(2)}</strong>.</p>
+        <p>Your order has been received on <strong>${new Date(
+          savedOrder.createdAt
+        ).toLocaleString()}</strong>, totaling <strong>£${savedOrder.total.toFixed(
+      2
+    )}</strong>.</p>
         <p><strong>Tracking Number:</strong> ${savedOrder.trackingNumber}</p>
         <h3>Order Details:</h3>
         <ul>
-          ${savedOrder.items.map(item => 
-            `<li>MenuID: ${item.menuId} | ${item.name} x${item.quantity} (£${item.price})</li>`
-          ).join("")}
+          ${savedOrder.items
+            .map(
+              (item) =>
+                `<li>MenuID: ${item.menuId} | ${item.name} x${item.quantity} (£${item.price})</li>`
+            )
+            .join("")}
         </ul>
         <p>We will notify you when your order is confirmed by the admin and ready for delivery.</p>
         <p style="margin-top:20px;">Thank you,<br><strong>Timah's Kitchen</strong></p>
@@ -144,12 +153,20 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order) throw new Error("Order not found");
 
-  const statusFlow = ["Pending", "Confirmed", "Processing", "Out for Delivery", "Delivered", "Cancelled"];
+  const statusFlow = [
+    "Pending",
+    "Confirmed",
+    "Processing",
+    "Out for Delivery",
+    "Delivered",
+    "Cancelled",
+  ];
   const currentIndex = statusFlow.indexOf(order.status);
   const newIndex = statusFlow.indexOf(status);
 
   if (newIndex === -1) throw new Error("Invalid status value");
-  if (newIndex < currentIndex) throw new Error("Cannot move order backward in status flow");
+  if (newIndex < currentIndex)
+    throw new Error("Cannot move order backward in status flow");
 
   order.status = status;
   if (!order.trackingNumber) order.trackingNumber = generateTrackingNumber();
@@ -157,7 +174,7 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
   // Stripe session creation if order confirmed and payment method is Stripe
   let stripePaymentLink = null;
   if (status === "Confirmed" && order.paymentMethod.toLowerCase() === "stripe") {
-    const line_items = order.items.map(item => ({
+    const line_items = order.items.map((item) => ({
       price_data: {
         currency: "gbp",
         product_data: { name: item.name },
@@ -217,7 +234,8 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
         break;
       case "Cancelled":
         subject = "❌ Your order has been cancelled";
-        message = "Your order has been cancelled. Please contact us if this is a mistake.";
+        message =
+          "Your order has been cancelled. Please contact us if this is a mistake.";
         break;
     }
   }
@@ -240,7 +258,10 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
     console.error("Failed to send status email:", err.message);
   }
 
-  res.json({ message: `Order status updated to "${order.status}"`, order: updatedOrder });
+  res.json({
+    message: `Order status updated to "${order.status}"`,
+    order: updatedOrder,
+  });
 });
 
 // ===============================
